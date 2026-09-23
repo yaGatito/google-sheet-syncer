@@ -22,7 +22,7 @@ class SheetEditEvent(BaseModel):
     timestamp: str
 
 @app.post("/webhook")
-async def receive_webhook(event: SheetEditEvent):
+def receive_webhook(event: SheetEditEvent):
     print(f" LOG RECEIVED {event}")
 
     if event.change_type != "EDIT" or event.row <= 1:
@@ -53,9 +53,10 @@ async def receive_webhook(event: SheetEditEvent):
             amount=ROWS_BUFFER[row_num][5]
         )
 
-        flush(new_product)
+        upsertProduct(new_product)
 
         del ROWS_BUFFER[row_num]
+
         return {"status": "flushed"}
 
     return {"status": "buffered"}
@@ -68,7 +69,7 @@ class Product:
     type: str
     amount: int
 
-def flush(product: Product):
+def upsertProduct(p: Product):
     db_server = os.getenv("MSSQL_HOST")
     db_port = os.getenv("MSSQL_PORT")
     db_name = os.getenv("MSSQL_DB_NAME")
@@ -134,17 +135,17 @@ def flush(product: Product):
                 cursor.execute(
                     query,
                     (
-                        product.id,
-                        product.name,
-                        product.desc,
-                        product.type,
-                        product.amount,
+                        str(p.id),
+                        str(p.name),
+                        str(p.desc),
+                        str(p.type),
+                        int(p.amount),
                     )
                 )
 
                 conn.commit()
 
-                print(f"Product {product.id} successfully flushed (UPSERTed).")
+                print(f"Product {p.id} successfully flushed (UPSERTed).")
     except Exception as e:
         print(f"Error during flush: {e}")
         raise
@@ -160,4 +161,4 @@ if __name__ == "__main__":
         amount=4
     )
 
-    flush(new_product)
+    upsertProduct(new_product)
