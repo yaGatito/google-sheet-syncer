@@ -1,13 +1,21 @@
 import os
+import logging
 from fastapi import FastAPI
 from pydantic import BaseModel
 from datetime import datetime
 import pytds
 from dataclasses import dataclass
 from dotenv import load_dotenv
+from pathlib import Path
 
 load_dotenv()
 app = FastAPI()
+
+logger = logging.getLogger("uvicorn")
+
+UPSERT_PRODUCT_QUERY = (
+    Path(__file__).parent / "sql" / "upsert_product.sql"
+).read_text()
 
 class ProductEvent(BaseModel):
     id: int
@@ -19,7 +27,7 @@ class ProductEvent(BaseModel):
 
 @app.post("/webhook")
 def receive_webhook(event: ProductEvent):
-    print(f"Received event: {event}")
+    logger.info(f"Received product event: {event.id}")
 
     product = Product(
         id=event.id,
@@ -30,18 +38,20 @@ def receive_webhook(event: ProductEvent):
         extra=event.extra
     )
 
-    upsertProduct(product)
+    upsert_product(product)
+
+    return {"status": "ok"}
 
 @dataclass
 class Product:
-    id: str
+    id: int
     name: str
     desc: str
     type: str
     amount: int
     extra: str
 
-def upsertProduct(p: Product):
+def upsert_product(p: Product):
     db_server = os.getenv("MSSQL_HOST")
     db_port = os.getenv("MSSQL_PORT")
     db_name = os.getenv("MSSQL_DB_NAME")
@@ -63,39 +73,6 @@ def upsertProduct(p: Product):
             f"Missing database configuration: {', '.join(missing)}"
         )
 
-    query = """
-    MERGE Products AS target
-    USING (
-        SELECT
-            %s AS id,
-            %s AS name,
-            %s AS [desc],
-            %s AS [type],
-            %s AS amount,
-            %s AS extra
-    ) AS source
-    ON target.id = source.id
-
-    WHEN MATCHED THEN
-        UPDATE SET
-            target.name = source.name,
-            target.[desc] = source.[desc],
-            target.[type] = source.[type],
-            target.amount = source.amount,
-            target.extra = source.extra
-
-    WHEN NOT MATCHED THEN
-        INSERT (id, name, [desc], [type], amount, extra)
-        VALUES (
-            source.id,
-            source.name,
-            source.[desc],
-            source.[type],
-            source.amount,
-            source.extra
-        );
-    """
-
     try:
         with pytds.connect(
             server=db_server,
@@ -108,7 +85,7 @@ def upsertProduct(p: Product):
         ) as conn:
             with conn.cursor() as cursor:
                 cursor.execute(
-                    query,
+                    UPSERT_PRODUCT_QUERY,
                     (
                         str(p.id),
                         str(p.name),
@@ -121,7 +98,7 @@ def upsertProduct(p: Product):
 
                 conn.commit()
 
-                print(f"Product {p.id} successfully upserted.")
+                logger.info(f"Product {p.id} successfully upserted.")
     except Exception as e:
-        print(f"Error during flush: {e}")
+        logger.error(f"Error during flush: {e}")
         raise
