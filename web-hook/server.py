@@ -149,16 +149,3 @@ def upsertProduct(p: Product):
     except Exception as e:
         print(f"Error during flush: {e}")
         raise
-
-if __name__ == "__main__":
-    # uvicorn.run(app, host="localhost", port=8000)
-
-    new_product = Product(
-        id="123",
-        name="afds",
-        desc="aasd",
-        type="aasd",
-        amount=4
-    )
-
-    upsertProduct(new_product)

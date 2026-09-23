@@ -12,5 +12,24 @@ services:
     volumes:
       - mssql_data:/var/opt/mssql/data
 
+  web-hook:
+    build:
+      context: ./web-hook
+      dockerfile: Dockerfile
+    container_name: fastapi_webhook
+    ports:
+      - "${WEBHOOK_PORT}:8000"
+    depends_on:
+      - sqlserver
+    environment:
+      MSSQL_HOST: sqlserver
+      MSSQL_PORT: 1433
+      MSSQL_DB_NAME: ${MSSQL_DB_NAME}
+      MSSQL_USER: ${MSSQL_USER}
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
+    volumes:
+      - ./web-hook:/app
+    command: uvicorn server:app --host 0.0.0.0 --port 8000
+
 volumes:
   mssql_data:
