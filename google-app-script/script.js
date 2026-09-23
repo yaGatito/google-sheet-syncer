@@ -1,21 +1,24 @@
+const url = "http://tidy-worsening-womanless.ngrok-free.dev/webhook";
+
 function onChangeTrigger(e) {
-  var url = "http://<WEBHOOK-SERVER-URL>/webhook"; 
-
-  if (!e) {
-    Logger.log("Event object is undefined. Run this by making a change in the sheet.");
-    return;
-  }
-
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-  var activeCell = sheet.getActiveCell();
+  var row = sheet.getActiveCell().getRow();
+
+  if (row <= 1) return;
+
+  var rowValues = sheet.getRange(row, 1, 1, 5).getValues()[0];
+
+  // Validation
+  if (!rowValues[0] || !rowValues[1] || !rowValues[2] || !rowValues[3] || !rowValues[4]) return;
 
   var payload = {
-    "sheet_name": sheet.getName(),
-    "row": activeCell.getRow(),
-    "column": activeCell.getColumn(),
-    "value": activeCell.getValue(),
-    "change_type": e.changeType || "EDIT", 
-    "timestamp": new Date().toISOString()
+    "change_type": "EDIT",
+    "id": row,
+    "name": rowValues[0] ? rowValues[0].toString() : "",
+    "desc": rowValues[1] ? rowValues[1].toString() : "",
+    "type": rowValues[2] ? rowValues[2].toString() : "",
+    "amount": rowValues[3] !== "" ? parseInt(rowValues[3]) : 0,
+    "extra": rowValues[4] ? rowValues[4].toString() : "",
   };
 
   var options = {
