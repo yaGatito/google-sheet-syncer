@@ -1,6 +1,6 @@
 import os
 import logging
-from fastapi import FastAPI
+from fastapi import Header, FastAPI, HTTPException
 from pydantic import BaseModel
 from datetime import datetime
 import pytds
@@ -26,7 +26,13 @@ class ProductEvent(BaseModel):
     extra: str
 
 @app.post("/webhook")
-def receive_webhook(event: ProductEvent):
+def receive_webhook(
+    event: ProductEvent,
+    x_webhook_secret: str = Header(...)
+):
+    if x_webhook_secret != os.getenv("WEBHOOK_SECRET"):
+        raise HTTPException(status_code=401, detail="Invalid secret")
+
     logger.info(f"Received product event: {event.id}")
 
     product = Product(

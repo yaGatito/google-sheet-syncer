@@ -1,6 +1,15 @@
-const url = "http://tidy-worsening-womanless.ngrok-free.dev/webhook";
+function getConfig() {
+  var properties = PropertiesService.getScriptProperties();
+
+  return {
+    url: properties.getProperty("WEBHOOK_URL"),
+    secret: properties.getProperty("WEBHOOK_SECRET")
+  };
+}
 
 function onChangeTrigger(e) {
+  var config = getConfig();
+
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   var row = sheet.getActiveCell().getRow();
 
@@ -12,8 +21,7 @@ function onChangeTrigger(e) {
   if (!rowValues[0] || !rowValues[1] || !rowValues[2] || !rowValues[3] || !rowValues[4]) return;
 
   var payload = {
-    "change_type": "EDIT",
-    "id": row,
+    "id": row - 1,
     "name": rowValues[0] ? rowValues[0].toString() : "",
     "desc": rowValues[1] ? rowValues[1].toString() : "",
     "type": rowValues[2] ? rowValues[2].toString() : "",
@@ -23,10 +31,12 @@ function onChangeTrigger(e) {
 
   var options = {
     "method": "post",
+    "headers": {
+      "X-Webhook-Secret": config.secret
+    },
     "contentType": "application/json",
-    "payload": JSON.stringify(payload),
-    "muteHttpExceptions": true
+    "payload": JSON.stringify(payload)
   };
 
-  UrlFetchApp.fetch(url, options);
+  UrlFetchApp.fetch(config.url, options);
 }
