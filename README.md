@@ -39,8 +39,13 @@ openssl rand -hex 32
 docker compose up -d
 ```
 
-### 4. Go to Google Sheets and name the table `products`. Prepare column names like this (can be skipped)
+### 4. Init schema in MS SQL Server. Run from the root project folder:
+```sh
+make init-db
+```
+
+### 5. Go to Google Sheets and name the table `products`. Prepare column names like this (can be skipped)
 
 ![example of Google Sheets with column names](assets/sheets.png)
 
-### 5. Try to insert/update rows with values.
+### 6. Try to insert/update rows with values.
